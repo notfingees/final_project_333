@@ -25,7 +25,7 @@
 
       function chart(csv) {
         var keys = csv.columns.slice(2);
-
+        var MaxNames = 20;
         var year = [...new Set(csv.map((d) => d.Year))];
         var states = [...new Set(csv.map((d) => d.Name))];
 
@@ -38,7 +38,7 @@
           .text((d) => d);
 
         var svg = d3.select("#chart"),
-          margin = { top: 35, left: 35, bottom: 0, right: 0 },
+          margin = { top: 35, left: 35, bottom: 20, right: 0 },
           width = +svg.attr("width") - margin.left - margin.right,
           height = +svg.attr("height") - margin.top - margin.bottom;
 
@@ -80,7 +80,7 @@
             .transition()
             .duration(speed)
             .call(d3.axisLeft(y).ticks(null, "s"));
-
+          console.log(data);
           data.sort(
             d3.select("#sort").property("checked")
               ? function (a, b) {
@@ -90,6 +90,14 @@
                 }
               : (a, b) => states.indexOf(a.Name) - states.indexOf(b.Name)
           );
+          data = data.filter(function (a) {
+            console.log(a);
+            console.log(Math.min(+a.Female, +a.Male) > 0);
+            return Math.min(+a.Female, +a.Male) > 0;
+          });
+          if (data.length > MaxNames) {
+            data = data.slice(0, MaxNames);
+          }
 
           x.domain(data.map((d) => d.Name));
 
@@ -97,7 +105,12 @@
             .selectAll(".x-axis")
             .transition()
             .duration(speed)
-            .call(d3.axisBottom(x).tickSizeOuter(0));
+            .call(d3.axisBottom(x).tickSizeOuter(0))
+            .style("text-anchor", "end")
+            .selectAll("text")
+            .attr("dx", "-1em")
+            .attr("dy", "0em")
+            .attr("transform", "rotate(-65)");
 
           var group = svg
             .selectAll("g.layer")
@@ -144,6 +157,7 @@
             .merge(text)
             .transition()
             .duration(speed)
+
             .attr("x", (d) => x(d.Name) + x.bandwidth() / 2)
             //.attr("y", d => y(d.total) - 5)
             .text((d) => d.total);
