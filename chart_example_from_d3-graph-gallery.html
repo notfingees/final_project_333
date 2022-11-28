@@ -25,7 +25,7 @@
 
       function chart(csv) {
         var keys = csv.columns.slice(2);
-        var MaxNames = 20;
+        var MaxNames = 40;
         var year = [...new Set(csv.map((d) => d.Year))];
         var states = [...new Set(csv.map((d) => d.Name))];
 
@@ -61,7 +61,13 @@
           .attr("transform", `translate(${margin.left},0)`)
           .attr("class", "y-axis");
 
-        var z = d3.scaleOrdinal().range(["red", "blue"]).domain(keys);
+//        var z = d3.scaleOrdinal().range(["red"]).domain(keys);
+          
+        let colorScale = d3.scaleLinear().domain([0, 1]).range(['red', 'blue'])
+        
+        function colorScaleTest(a){
+            console.log("in colorScaleTest:", a)
+        }
 
         update(d3.select("#year").property("value"), 0);
 
@@ -80,7 +86,7 @@
             .transition()
             .duration(speed)
             .call(d3.axisLeft(y).ticks(null, "s"));
-          console.log(data);
+          console.log("data:", data);
           data.sort(
             d3.select("#sort").property("checked")
               ? function (a, b) {
@@ -91,7 +97,7 @@
               : (a, b) => states.indexOf(a.Name) - states.indexOf(b.Name)
           );
           data = data.filter(function (a) {
-            console.log(a);
+            console.log("a:", a);
             console.log(Math.min(+a.Female, +a.Male) > 0);
             return Math.min(+a.Female, +a.Male) > 0;
           });
@@ -121,16 +127,19 @@
           group
             .enter()
             .append("g")
-            .classed("layer", true)
-            .attr("fill", (d) => z(d.key));
+            .classed("layer", true);
+//            .attr("fill", (d, i) => console.log("D is:", d, "i is", i, colorScaleTest(d)));
 
           var bars = svg
             .selectAll("g.layer")
             .selectAll("rect")
             .data(
-              (d) => d,
+              (d) => {console.log("d in line 137 is", d)
+                      return d
+                     },
               (e) => e.data.Name
             );
+            
 
           bars.exit().remove();
 
@@ -143,7 +152,11 @@
             .duration(speed)
             .attr("x", (d) => x(d.data.Name))
             .attr("y", (d) => y(d[1]))
-            .attr("height", (d) => y(d[0]) - y(d[1]));
+//            .attr("height", (d) => y(d[0]) - y(d[1]))
+            .attr("height", (d) => y(d[0]) + y(d[1]))
+            .attr("fill", (d, i) => {console.log("D in line 156 is", d, i)
+                                    return colorScale(d[0] / (d[0]+d[1]))
+                             })
 
           var text = svg.selectAll(".text").data(data, (d) => d.Name);
 

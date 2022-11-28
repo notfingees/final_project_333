@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+/*
+.bar {
+  fill: steelblue;
+}
+
+.bar:hover {
+  fill: brown;
+}
+*/
+    
+    /* slider stuff */
+    .slidecontainer {
+  width: 100%;
+}
+    
+    #filter {
+        display: none !important;
+    }
+
+.slider {
+  -webkit-appearance: none;
+  width: 77.5%;
+  height: 25px;
+  /*background: #d3d3d3;*/
+    background: transparent;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+    
+    position: absolute;
+    z-index: 10000;
+    
+    left: 20px;
+    top: 20%;
+    
+    
+    
+}
+    
+    .slider_wrapper {
+        position: absolute;
+    bottom: 20px;
+    left: 10%;
+    }
+    
+    .slider_wrapper img {
+        width: 80%;
+        height: auto;
+        float: left;
+    }
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 3px;
+  height: 80px;
+  background: black;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  background: #04AA6D;
+  cursor: pointer;
+}
+    
+    /* end of slider stuff */
+
+.axis--x path {
+  display: none;
+}
+
+
+svg {
+    position: absolute;
+  margin-top: 40px;
+}
+
+select {
+  margin-left: 60px;
+}
+    
+    #sort_filter {
+        float: left;
+    }
+    
+    
+    .storytelling_wrapper {
+        
+    }
+    
+    .context {
+        position: absolute;
+        left: 80%;
+        top: 5%;
+    }
+    
+    #context_year_range {
+        font-family: "Helvetica";
+        font-weight: bold;
+    }
+    
+    #context_info {
+        font-family: "Helvetica";
+        width: 80%;
+        font-size: 14px;
+        
+    }
+    
+    #sources {
+        font-family: "Helvetica";
+        width: 80%;
+        font-size: 10px;
+    }
+    
+    #sources a {
+        color: black;
+    }
+    
+</style>
+<body>
+    <select id="filter">
+      <option value="1880">1880</option>
+      <option value="2017">2017</option>
+    </select>
+    
+    <select id="sort_filter">
+        <option value="most_gender_neutral">Most Gender Neutral</option>
+      <option value="alphabetical">Alphabetical</option>
+      
+      <option value="highest_frequency">Highest Count</option>
+    </select>
+    
+    <div class="storytelling_wrapper">
+    
+    <svg width="960" height="500"></svg>
+        
+        <div class="context">
+            <p id="context_year_range">1940-1949</p>
+            <p id="context_info">1941 – Following the bombing of Pearl Harbor, all U.S. citizens participated in the war effort and enlistments occurred at the rate of 14,000 per day in 1942. Gay and lesbian people joined as well – men in the military living in same-sex dorms, and women as part of the Women Accepted for Volunteer Emergency Service (WAVES) and in factories on the home front found themselves in same-sex surroundings as well. In addition, men who fought in Europe, during their leave time, found same-sex relationships more relaxed than in the U.S.<br><br></p>
+            <p id="sources">Contextual information found from <a href='https://www.lgbtqhistory.org/lgbt-rights-timeline-in-american-history/'>here</a> and <a href='https://www.history.com/topics/womens-history/womens-history-us-timeline'>here</a>, dataset from <a href='https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-22/babynames.csv'>here</a></p>
+        </div>
+        
+        
+    </div>
+    
+    <div class="slider_wrapper">
+        <img src="slider_background.png">
+    <input type="range" min="1880" max="2017" value="1948" class="slider" id="yearSelector">
+        </div>
+</body>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+var maxNames = 50;
+var svg = d3.select("svg"),
+    margin = {top: 20, right: 20, bottom: 50, left: 40},
+    width = +svg.attr("width") - margin.left - margin.right,
+    height = +svg.attr("height") - margin.top - margin.bottom;
+    
+    
+
+var x = d3.scaleBand().rangeRound([0, width]).padding(0.1),
+    y = d3.scaleLinear().rangeRound([height, 0]);
+
+let colorScale = d3.scaleLinear().domain([0, 1]).range(['red', 'blue'])
+
+var g = svg.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// create a variable that will hold the loaded data
+var tsv;
+
+// load the data
+d3.csv("babynames_unisex_10000.csv", function(d) {
+//    console.log("d is", d)
+//  d.frequency = +d.frequency;
+    var total = parseInt(d.Female) + parseInt(d.Male)
+//    console.log(parseInt(d.Female)/total, total)
+    d.frequency = total
+    d.ratio = parseInt(d.Female)/total
+//    console.log("d is", d)
+  return d;
+}, function(error, datafile) {
+  if (error) throw error;
+    
+
+  // put the original data in tsv
+  tsv = datafile;
+    
+  console.log("tsv is",tsv)
+
+  // filter the data based on the inital value
+  var data = tsv.filter(function(d) { 
+    var sq = d3.select("#filter").property("value");
+    return d.Year === sq;
+  });
+    
+    data.sort((a, b) => 
+        (Math.abs(0.5-a.ratio) > Math.abs(0.5-b.ratio)) ? 1 : -1
+    )
+      
+      data = data.slice(0, maxNames);
+    
+
+  // set the domains of the axes
+  x.domain(data.map(function(d) { return d.Name; }));
+  y.domain([0, d3.max(data, function(d) { return d.frequency; })]);
+
+    console.log("after this")
+  // add the svg elements
+  g.append("g")
+      .attr("class", "axis axis--x")
+      .attr("transform", "translate(0," + height + ")")    
+      .call(d3.axisBottom(x))
+    
+    .style("text-anchor", "end")
+            .selectAll("text")
+            .attr("dx", "-1em")
+            .attr("dy", "0em")
+            .attr("transform", "rotate(-65)");
+
+  g.append("g")
+      .attr("class", "axis axis--y")
+      .call(d3.axisLeft(y).ticks(10))
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", "0.71em")
+      .attr("text-anchor", "end")
+      .text("Frequency");
+
+  // create the bars
+  g.selectAll(".bar")
+    .data(data)
+    .enter().append("rect")
+      .attr("class", "bar")
+      .attr("x", function(d) { return x(d.Name); })
+      .attr("y", function(d) { return y(d.frequency); })
+      .attr("width", x.bandwidth())
+      .attr("fill", (d, i) => {
+      return colorScale(d.ratio)})
+      .attr("height", function(d) { return height - y(d.frequency); });
+      
+
+  // add a change event handler 
+  d3.select("#yearSelector").on("input", function() {
+      applyFilter(this.value, document.getElementById("sort_filter").value);
+    }); /* switch to on hover */
+    
+    d3.select("#sort_filter").on("change", function() {
+      applyFilter(document.getElementById("filter").value, this.value);
+    });
+    
+
+  // call this whenever the filter changes
+  function applyFilter(value, sort_value) {
+    // filter the data
+      
+      /* modify context */
+      
+      var value_int = parseInt(value)
+      if (value_int >= 1880 && value_int < 1890){
+          document.getElementById("context_year_range").innerHTML = "1880-1889"
+          document.getElementById("context_info").innerHTML = `1886 – Henry James writes the book, The Bostonians, about a long term relationship between two women and the term “Boston Marriages” develops to describe two women living together, independent of financial support from a man.
+<br><br>
+1889 – Jane Addams, along with other women, open Hull House in Chicago that provided daycare, libraries, classes and an employment bureau for women.
+<br><br>
+1890 – The term, Lesbian, first used in a medical dictionary.
+<br><br>
+1890 – Hull House, founded by Jane Addams and other women opens in Chicago, IL with funding from her partner, Mary Rozet Smith.
+
+`
+        
+      }
+      else if (value_int >= 1890 && value_int < 1900){
+          document.getElementById("context_year_range").innerHTML = "1890-1899"
+          document.getElementById("context_info").innerHTML = `<br><br>
+1890 – Birth of Alan Hart who pioneered the use of the X-Ray for tuberculosis diagnosis and one of the first transgender men in history.
+<br><br>
+1892 – The pamphlet, “Psychopathia Sexualis” is translated from German and one of the first times the term bisexual is used. Written by Richard van Kraft-Ebbing. Translated by Charles Gilbert Chaddock.
+<br><br>
+1896 – Plessy v. Ferguson (Supreme Court Decision)
+By a vote of 7-1 declares racial segregation legal and is not an infringement on the equal protection clauses of the Fourteenth Amendment.
+<br><br>
+1895 – Trial of Oscar Wilde (writer and novelist) in London, England and convicted for gross indecency (relationships with other men) and served two years in jail.
+`
+      }
+      else if (value_int >= 1900 && value_int <= 1909){
+          document.getElementById("context_year_range").innerHTML = "1900-1909"
+          document.getElementById("context_info").innerHTML = `1907 – Gertrude Stein meets Alice B. Toklas, sparking a legendary romance. In Paris, the two women set up a salon that connects many great writers and artists, including gays. Stein publicly declares her love for Toklas in print in The Autobiography of Alice B. Toklas, published in 1933.
+<br><br>
+1907 – Hirschfeld, a Jewish German physician and sexologist, testified at a trial in Germany about a gay relationship and stated, “homosexuality was part of the plan of nature and creation just like normal love.”`
+      }
+      else if (value_int >= 1910 && value_int <= 1919){
+          document.getElementById("context_year_range").innerHTML = "1910-1919"
+          document.getElementById("context_info").innerHTML = `1917-1935 – The Harlem Renaissance. Historians have stated that the renaissance was “as gay as it was black.” Some of the lesbian, gay or bisexual people of this movement included writers and poets such as Langston Hughes, Countee Cullen and Zora Neale Hurston; Professor Alain Locke; music critic and photographer Carl Van Vechten
+<br><br>
+1916: Margaret Sanger opens the first birth control clinic in the United States. When she had to close three times due to legal threats, she closed the clinic and eventually founded the American Birth Control League in 1921—the precursor to today’s Planned Parenthood.
+<br><br>
+1917: Jeannette Rankin of Montana, a longtime activist with the National Woman Suffrage Association, is sworn in as the first woman elected to Congress as a member of the House of Representatives.
+
+`
+      }
+      else if (value_int >= 1920 && value_int <= 1929){
+          document.getElementById("context_year_range").innerHTML = "1920-1929"
+          document.getElementById("context_info").innerHTML = `1920: Ratification of the 19th Amendment to the U.S. Constitution is completed, declaring “the right of citizens of the United States to vote shall not be denied or abridged by the United States or by any State on account of sex.” It is nicknamed “The Susan B. Anthony Amendment” in honor of her work on behalf of women’s suffrage.<br><br>
+1924 – The Society for Human Rights, the first gay rights organization, was founded by Henry Gerber in Chicago who had emigrated from Germany. The organization ceased to exist after most of its members were arrested.`
+      }
+      else if (value_int >= 1930 && value_int <= 1939){
+          document.getElementById("context_year_range").innerHTML = "1930-1939"
+          document.getElementById("context_info").innerHTML = `1930s: Women had the vote, education and divorce reforms and at least the right to be lawyers and MPs. Skirts got shorter and so did hair. Women smoked cigarettes, danced the jitterbug and – those who could afford it – drove motor cars.
+<br><br>
+The federal law prohibiting the dissemination of contraceptive information through the mail is modified and birth control information is no longer classified as obscene. Throughout the 1940s and 50s, birth control advocates are engaged in numerous legal suits.`
+      }
+      else if (value_int >= 1940 && value_int <= 1949){
+          document.getElementById("context_year_range").innerHTML = "1940-1949"
+          document.getElementById("context_info").innerHTML = `1941 – Following the bombing of Pearl Harbor, all U.S. citizens participated in the war effort and enlistments occurred at the rate of 14,000 per day in 1942. Gay and lesbian people joined as well – men in the military living in same-sex dorms, and women as part of the Women Accepted for Volunteer Emergency Service (WAVES) and in factories on the home front found themselves in same-sex surroundings as well. In addition, men who fought in Europe, during their leave time, found same-sex relationships more relaxed than in the U.S.<br><br>`
+      }
+      else if (value_int >= 1950 && value_int <= 1959){
+          document.getElementById("context_year_range").innerHTML = "1950-1959"
+          document.getElementById("context_info").innerHTML = `1955: The Daughters of Bilitis (DOB), the first lesbian organization in the United States, is founded. 
+<br><br>
+1952 – Christine Jorgensen became one of the most famous transgender people when she underwent a sex change operation and went on to a successful career in show business.
+<br><br>
+1952 – The American Psychiatric Association’s diagnostic manual lists homosexuality as a sociopathic personality disturbance that could be treated.
+<br><br>
+1953 – Kinsey Report, Sexual Behavior in the Human Female, was published and discussed female homosexuality.
+
+1953 (April 27) – Executive Order 10450 issued by President Dwight D. Eisenhower banning homosexuals from working for the federal government stating they are a security risk. 
+`
+      }
+      else if (value_int >= 1960 && value_int <= 1969){
+          document.getElementById("context_year_range").innerHTML = "1960-1969"
+          document.getElementById("context_info").innerHTML = `
+1962 – Illinois becomes the first state to decriminalize homosexual acts between two consenting adults in private.
+<br><br>
+1963: President John F. Kennedy signs into law the Equal Pay Act, prohibiting sex-based wage discrimination between men and women performing the same job in the same workplace.
+<br><br>
+1964: President Lyndon B. Johnson, signs the Civil Rights Act into law; Title VII bans employment discrimination based on race, religion, national origin or sex.
+<br><br>
+1966 – Compton’s Cafeteria Riot, San Francisco. Transgender and drag queens in San Francisco reacted to ongoing harassment by the police force.
+<br><br>
+
+`
+      }
+      else if (value_int >= 1970 && value_int <= 1979){
+          document.getElementById("context_year_range").innerHTML = "1970-1979"
+          document.getElementById("context_info").innerHTML = `1970 – The first gay pride marches were held in multiple cities across the United States on the first anniversary of the Stonewall Riots, including San Francisco and Los Angeles / West Hollywood.<br><br>
+1973 – Roe v. Wade (Supreme Court Decision)
+By a vote of 7-2 determined that women have a right to privacy protected by the Fourteenth Amendment and choice regarding abortion.
+<br><br>
+1978 – In San Francisco, the Rainbow Flag is first flown during the Gay Freedom Parade; the flag becomes a symbol of gay and lesbian pride.
+<br><br>
+1979 – National March on Washington for Lesbian and Gay Rights. Over 100,000 people gathered in support of gay and lesbian rights.
+`
+      }
+      else if (value_int >= 1980 && value_int <= 1989){
+          document.getElementById("context_year_range").innerHTML = "1980-1989"
+          document.getElementById("context_info").innerHTML = `1981 – AIDS Epidemic begins. There were a total of 583, 298 U.S. men women and children who would die from AIDS through 2007.
+<br><br>
+1986 – Bowers v. Hardwick (Supreme Court Decision)
+By a vote of 5-4 that a Georgia sodomy law criminalizing oral and anal sex in private between consenting adults was legal and that there were no constitutional protections for acts of sodomy. <br><br>
+July 7, 1981: Sandra Day O’Connor is sworn in by President Ronald Reagan as the first woman to serve on the U.S. Supreme Court. 
+
+`
+      }
+      else if (value_int >= 1990 && value_int <= 1999){
+          document.getElementById("context_year_range").innerHTML = "1990-1999"
+          document.getElementById("context_info").innerHTML = `March 12, 1993: Nominated by President Bill Clinton, Janet Reno is sworn in as the first female attorney general of the United States.
+<br><br>
+Jan. 23, 1997: Also nominated by Clinton, Madeleine Albright is sworn in as the nation’s first female secretary of state.
+<br><br>
+Sept. 13, 1994: Clinton signs the Violence Against Women Act as part of the Violent Crime Control and Law Enforcement Act, providing funding for programs that help victims of domestic violence, rape, sexual assault, stalking and other gender-related violence.`
+      }
+      else if (value_int >= 2000 && value_int <= 2009){
+          document.getElementById("context_year_range").innerHTML = "2000-2009"
+          document.getElementById("context_info").innerHTML = `2003 – Lawrence v. Texas (Supreme Court Decision)
+Ruled by a vote of 6-3 that a Kansas law criminalizing gay or lesbian sex was unconstitutional declaring the importance of constitutional liberty and privacy consistent with the due process clause of the Fourteenth Amendment. <br><br>
+2008 (November) – Proposition 8 passes with a 52% yes vote in California declaring that marriage is between a man and a woman.
+<br><br>
+2007: U.S. Rep. Nancy Pelosi (D-Calif.) becomes the first female speaker of the House. In 2019, she reclaims the title, becoming the first lawmaker to hold the office two times in more than 50 years.`
+      }
+      else {
+          document.getElementById("context_year_range").innerHTML = "2010-2017"
+          document.getElementById("context_info").innerHTML = `July 26, 2016: Hillary Clinton becomes the first woman to receive a presidential nomination from a major political party.<br><br>
+2013 – U.S. v. Windsor / Repeal of the Defense of Marriage Act – DOMA (Supreme Court Decision)
+By a vote of 5-4 ruled that defining marriage as just between a man and a woman is unconstitutional under the Fifth Amendment guarantee of equal protection.
+<br><br>
+2015 – Obergefell v. Hodges (Supreme Court Decision)
+The Court voted 5-4 that the fundamental right to marry is guaranteed to same-sex couples by both the Due Process Clause and the Equal Protection Clause of the Fourteenth Amendment of the U.S. Constitution. `
+      }
+      
+      /* end of modify context */
+      
+    console.log("sort_value changed", sort_value, "value is", value)
+      
+    var data = tsv.filter(function(d) {
+        
+        return d.Year === value;})
+    
+//    console.log("pre sorted data is", data)
+
+    if (sort_value == "alphabetical"){
+        data.sort((a, b) => 
+            (a.Name > b.Name) ? 1 : -1
+        )
+    }
+    if (sort_value == "most_gender_neutral"){
+        data.sort((a, b) => 
+            (Math.abs(0.5-a.ratio) > Math.abs(0.5-b.ratio)) ? 1 : -1
+        )
+    }
+    if (sort_value == "highest_frequency"){
+        data.sort((a, b) => 
+            (a.frequency < b.frequency) ? 1 : -1
+        )
+    }
+      
+      
+      data = data.slice(0, maxNames);
+//      data.sort((a, b) => (Math.abs(a.frequency) < Math.abs(b.frequency)) ? 1 : -1)
+      
+      
+      
+      console.log("post sorted data is", data)
+      
+    x.domain(data.map(function(d) { return d.Name; }));
+    y.domain([0, d3.max(data, function(d) { return d.frequency; })]);
+      
+    var axis_text = svg.selectAll("g.axis").remove();
+      
+    g.append("g")
+      .attr("class", "axis axis--x")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x))
+      
+      .style("text-anchor", "end")
+            .selectAll("text")
+            .attr("dx", "-1em")
+            .attr("dy", "0em")
+            .attr("transform", "rotate(-65)");
+
+  g.append("g")
+      .attr("class", "axis axis--y")
+      .call(d3.axisLeft(y).ticks(10))
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", "0.71em")
+      .attr("text-anchor", "end")
+      .text("Frequency");
+
+      
+    // update the bars
+    d3.selectAll(".bar")
+      .data(data)
+      .transition().duration(200)
+      .attr("x", function(d) { return x(d.Name); })
+      .attr("y", function(d) { return y(d.frequency); })
+      .attr("fill", (d, i) => {
+//        console.log("in fill once", colorScale(d.ratio))
+      return colorScale(d.ratio)})
+      .attr("height", function(d) { return height - y(d.frequency); });
+      
+      
+
+  }
+
+});
+
+</script>
