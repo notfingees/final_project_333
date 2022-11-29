@@ -127,6 +127,21 @@ select {
         color: black;
     }
     
+    #legend_img {
+        width: 14%;
+        height: auto;
+        position: absolute;
+        left: 0px;
+        top: 10%;
+    }
+    
+    h1 {
+        position: absolute;
+        left: 35%;
+        font-family: Helvetica;
+        font-size: 16px;
+    }
+    
 </style>
 <body>
     <select id="filter">
@@ -140,9 +155,13 @@ select {
       
       <option value="highest_frequency">Highest Count</option>
     </select>
+    <div class="legend">
+        <img src="legend.png" id="legend_img">
+    </div>
     
     <div class="storytelling_wrapper">
     
+        <h1>Gender Neutral Names Over Time</h1>
     <svg width="960" height="500"></svg>
         
         <div class="context">
